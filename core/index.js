@@ -1,66 +1,70 @@
-function renderVNode (vnode) {
-  // init element
-  if (typeof vnode !== 'object') return document.createTextNode(vnode)
-  const node = document.createElement(vnode.tag)
-  // add props
-  for (let key in vnode.props) {
-    if (key === 'children') continue
-    if (key.startsWith('on')) {
-      node.addEventListener(key.substring(2).toLowerCase(), vnode.props[key])
-    } else {
-      node.setAttribute(key, vnode.props[key])
-    }
+let current;
+
+class Component {
+  constructor(element, state) {
+    this.props = element.props;
+    this.render = element.tag;
+    this.state = state || {
+      hooks: [],
+      hookIndex: 0,
+    };
   }
-  // render children
-  for (let child of vnode.props.children) {
-    React.render(child, node)
-  }
-  return node
 }
 
 export const React = {
-  currentElement: null,
-  currentContainer: null,
-  render (element, container) {
-    this.currentElement = element
-    this.currentContainer = container
-    if (typeof element.tag === 'function') {
-      const vnode = element.tag(element.props)
-      element.alternate = vnode
-      const newNode = renderVNode(vnode)
-      if (element.dom) {
-        container.replaceChild(newNode, element.dom)
-      } else {
-        container.appendChild(newNode)
-      }
-      element.dom = newNode
-    } else {
-      container.appendChild(renderVNode(element))
-    }
+  createElement(tag, props, ...children) {
+    return { tag, props: { ...props, children } };
   },
-  createElement (tag, props, ...children) {
-    const element = { tag, props: { ...props, children }, dom: null, alternate: null }
-    if (typeof tag === 'function')
-      return { ...element, state: { hooks: element.alternate?.state.hooks ?? [], hookIndex: 0 } }
-    return element
-  },
-}
+};
 
-export function useState (initValue) {
-  const [element, container] = [React.currentElement, React.currentContainer]
-  const { state } = element
-  if (state.hookIndex === state.hooks.length) {
+export const ReactDOM = {
+  render(element, container) {
+    if (typeof element !== "object") {
+      container.appendChild(document.createTextNode(element));
+      return;
+    }
+    const isComponent = element instanceof Component || typeof element.tag === "function";
+    let vnode, dom, oldDom;
+    if (isComponent) {
+      current = element instanceof Component ? element : new Component(element);
+      vnode = current.render(current.props);
+      oldDom = current.dom;
+      dom = document.createElement(vnode.tag);
+      current.dom = dom;
+      dom.__state__ = current.state;
+    } else {
+      vnode = element;
+      dom = document.createElement(element.tag);
+    }
+    for (let key in vnode.props) {
+      if (key === "children") continue;
+      if (key.startsWith("on")) {
+        dom.addEventListener(key.substring(2).toLowerCase(), vnode.props[key]);
+      } else {
+        dom.setAttribute(key, vnode.props[key]);
+      }
+    }
+    vnode.props.children.forEach((child) => this.render(child, dom));
+    if (oldDom) container.replaceChild(dom, oldDom);
+    else container.appendChild(dom);
+  },
+};
+
+export function useState(initValue) {
+  const component = current;
+  const { hooks, hookIndex } = component.state;
+  if (hookIndex === hooks.length) {
     const newHook = {
       value: initValue,
-      setState (newValue) {
-        newHook.value = newValue
-        state.hookIndex = 0
-        React.render(element, container)
+      setState(newValue) {
+        newHook.value = newValue;
+        component.state.hookIndex = 0;
+        ReactDOM.render(component, component.dom.parentNode);
       },
-    }
-    state.hooks.push(newHook)
+    };
+    hooks.push(newHook);
   }
-  const hook = state.hooks[element.state.hookIndex]
-  state.hookIndex += 1
-  return [hook.value, hook.setState]
+  const hook = hooks[hookIndex];
+  component.state.hookIndex += 1;
+  return [hook.value, hook.setState];
 }
