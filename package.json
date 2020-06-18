@@ -1,13 +1,18 @@
 {
-  "name": "simple-react-but-works",
-  "version": "1.0.0",
-  "main": "index.js",
+  "name": "yyact",
+  "version": "0.0.1",
+  "main": "./bundle/yyact.cjs.js",
+  "module": "./bundle/yyact.esm.js",
+  "browser": "./bundle/yyact.umd.js",
   "license": "MIT",
   "scripts": {
     "dev": "parcel ./index.html"
   },
   "devDependencies": {
     "parcel-bundler": "1.12.4",
-    "rollup": "^2.6.1"
+    "prettier": "^2.0.5",
+    "rollup": "^2.6.1",
+    "rollup-plugin-typescript2": "^0.27.1",
+    "typescript": "^3.9.5"
   }
 }

@@ -1,8 +1,8 @@
-import { React, ReactDOM, useState } from "../core";
-function Title() {
+import { React, ReactDOM, useState } from "../src";
+function Simple(props) {
   return (
     <div>
-      <h1>123</h1>
+      <h1>{props.name}</h1>
       <div>
         Hello, <b>fake react</b>
       </div>
@@ -11,6 +11,7 @@ function Title() {
 }
 function Counter() {
   const [count, setCount] = useState(2);
+
   return (
     <div>
       <h1>counter</h1>
@@ -22,7 +23,7 @@ function App() {
   const [input, setInput] = useState(0);
   return (
     <div>
-      <h1>hello, {input}</h1>
+      <Simple name={input} />
       <button onClick={() => setInput(input + 1)}>{input}</button>
       <input value={input} onInput={(e) => setInput(e.target.value)} />
       <Counter />
@@ -30,6 +31,6 @@ function App() {
   );
 }
 // ReactDOM.render("123", document.getElementById("root"));
-// ReactDOM.render(<Title />, document.getElementById("root"));
+// ReactDOM.render(<Simple />, document.getElementById("root"));
 // ReactDOM.render(<Counter />, document.getElementById("root"));
 ReactDOM.render(<App />, document.getElementById("root"));
