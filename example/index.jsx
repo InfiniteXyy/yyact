@@ -20,17 +20,18 @@ function Counter() {
   );
 }
 function App() {
-  const [input, setInput] = useState(0);
+  const [input, setInput] = useState("xyy");
+  const [count, setCount] = useState(0);
   return (
     <div>
-      <Simple name={input} />
-      <button onClick={() => setInput(input + 1)}>{input}</button>
+      <Simple name={"Hello " + input} />
+      <button onClick={() => setCount(count + 1)}>{count}</button>
       <input value={input} onInput={(e) => setInput(e.target.value)} />
       <Counter />
     </div>
   );
 }
 // ReactDOM.render("123", document.getElementById("root"));
-// ReactDOM.render(<Simple />, document.getElementById("root"));
+// ReactDOM.render(<Simple name={"123"} />, document.getElementById("root"));
 // ReactDOM.render(<Counter />, document.getElementById("root"));
 ReactDOM.render(<App />, document.getElementById("root"));

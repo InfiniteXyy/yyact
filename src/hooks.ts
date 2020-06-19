@@ -1,19 +1,20 @@
-import { runtime } from "./common";
+import { vdom } from "./common";
 
 export function useState<T>(initValue: T): [T, (value: T) => void] {
-  const component = runtime.currentComponent;
-  if (component === null) throw new Error("use hooks outside of function");
+  const component = vdom.currentComponent;
+  if (!component) throw new Error("use hooks outside of function");
   const { hooks, hookIndex } = component.state;
   if (hookIndex === hooks.length) {
-    const newHook = {
+    const currentHook = {
       value: initValue,
       setState(value: T) {
-        newHook.value = value;
+        vdom.currentComponent = component;
+        currentHook.value = value;
         component.state.hookIndex = 0;
-        if (component.refresh) component.refresh();
+        component.refresh();
       },
     };
-    hooks.push(newHook);
+    hooks.push(currentHook);
   }
   const hook = hooks[hookIndex];
   component.state.hookIndex += 1;

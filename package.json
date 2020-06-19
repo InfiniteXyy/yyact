@@ -6,7 +6,8 @@
   "browser": "./bundle/yyact.umd.js",
   "license": "MIT",
   "scripts": {
-    "dev": "parcel ./index.html"
+    "dev": "parcel ./index.html",
+    "bundle": "rollup -c"
   },
   "devDependencies": {
     "parcel-bundler": "1.12.4",

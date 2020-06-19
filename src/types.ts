@@ -1,17 +1,33 @@
 export type AnyMap = { [key: string]: any };
 
-export type PropsType = { children: (JSXElement | string | number)[] } & AnyMap;
+export type JSXElement = FuncElement | PureElement | string | number;
 
 export type FuncElement = {
-  type: (props: PropsType) => JSXElement;
-  props: PropsType;
+  type: (props: AnyMap & { children: JSXElement[] }) => JSXElement;
+  props: AnyMap;
+  children: JSXElement[];
 };
 
 export type PureElement = {
   type: string;
-  props: PropsType;
+  props: AnyMap;
+  children: JSXElement[];
 };
 
-export type JSXElement = FuncElement | PureElement;
+export type HookState = { hooks: any[]; hookIndex: number };
 
-export type HookState = { hooks: any[]; hookIndex: 0 };
+export interface IComponent {
+  render: (props: AnyMap & { children: JSXElement[] }) => JSXElement;
+  props: AnyMap;
+  children: JSXElement[];
+  state: HookState;
+
+  refresh(): void;
+}
+
+export type INode = {
+  type: string;
+  props: AnyMap | null;
+  children: INode[];
+  dom: Element | Text | null;
+};

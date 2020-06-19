@@ -1,8 +1,9 @@
 {
   "compilerOptions": {
     "module": "esnext",
-    "target": "esnext",
+    "target": "es6",
     "sourceMap": true,
     "strict": true
-  }
+  },
+  "exclude": ["node_modules"]
 }

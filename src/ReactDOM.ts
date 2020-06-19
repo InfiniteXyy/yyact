@@ -1,70 +1,64 @@
-import { Component, runtime } from "./common";
-import { FuncElement, JSXElement, PureElement } from "./types";
+import { Component, VNode, vdom } from "./common";
+import { INode, JSXElement } from "./types";
+import { isFuncElement, deepEqual } from "./utils";
+import { createDOM, replaceDOM, updateDom } from "./dom";
 
-function isFuncElement(element: JSXElement): element is FuncElement {
-  return typeof element.type === "function";
-}
-
-/* 处理函数式组件 */
-function handleFuncElement(component: Component, container: Element, oldDOM?: Element) {
-  // 全局设置当前函数组件，供 Hook API 使用
-  runtime.currentComponent = component;
-  const vnode = component.render(component.props);
-  // 继续递归处理后续函数组件，直至普通的 HTML 组件
-  ReactDOM.render(vnode, container, oldDOM);
-}
-
-/* 处理 HTML 组件 */
-function handlePureElement(element: PureElement, container: Element, oldDOM?: Element) {
-  const dom = document.createElement(element.type);
-  Object.getOwnPropertyNames(element.props).forEach((key) => {
-    if (key === "children") return;
-    if (key.startsWith("on")) {
-      dom.addEventListener(key.substring(2).toLowerCase(), element.props[key]);
-    } else {
-      dom.setAttribute(key, element.props[key]);
+export function reconcileChildren(node: Element, prevTree: INode, curTree: INode) {
+  if (prevTree.type !== curTree.type) {
+    // 若标签不同，则直接重新渲染
+    replaceDOM(node, curTree);
+  } else {
+    // 若props不同，则对原来元素进行更新
+    if (!deepEqual(prevTree.props, curTree.props)) {
+      updateDom(node, node.parentNode as Element, prevTree.props!, curTree.props!);
     }
-  });
-  // 绑定状态更新逻辑到实际 DOM 节点
-  if (runtime.currentComponent) {
-    const component = runtime.currentComponent;
-    component.dom = dom;
-    (dom as any).__component__ = component;
-    component.refresh = () => {
-      handleFuncElement(component, container, component.dom);
-    };
-    runtime.currentComponent = null;
-  }
-  if (oldDOM) {
-    for (let i = 0; i < oldDOM.childElementCount; i++) {
-      if ("__component__" in oldDOM.children[i]) {
-        const component: Component = (oldDOM.children[i] as any)["__component__"];
-        component.state.hookIndex = 0;
-        handleFuncElement(component, dom);
-      } else {
-        ReactDOM.render(element.props.children[i], dom);
+    // 结构性变化，直接重新渲染
+    if (prevTree.children.length !== curTree.children.length) {
+      replaceDOM(node, curTree);
+    } else {
+      // 若子元素个数相同，则一一比较
+      for (let i = 0; i < prevTree.children.length; i++) {
+        reconcileChildren(node.childNodes[i] as Element, prevTree.children[i], curTree.children[i]);
       }
     }
-    container.replaceChild(dom, oldDOM);
-  } else {
-    element.props.children.forEach((child) => {
-      ReactDOM.render(child, dom);
-    });
-    container.appendChild(dom);
   }
+}
+
+export function buildVDOM(element: JSXElement): VNode {
+  let vnode: VNode;
+  if (typeof element !== "object") {
+    /* 处理字符串 */
+    vnode = new VNode("TEXT", { content: element.toString() }, []);
+  } else if (isFuncElement(element)) {
+    /* 处理函数组件 */
+    const component = new Component(element.type, element.props, element.children);
+    // 全局设置当前函数组件，供 Hook API 使用
+    vdom.currentComponent = component;
+    const unwrappedElement = component.render({ ...component.props, children: component.children });
+    vnode = buildVDOM(unwrappedElement);
+    // 将 vnode 绑定到组件，供更新使用
+    component.refresh = () => {
+      component.state.hookIndex = 0;
+      const newVNode = buildVDOM(component.render({ ...component.props, children: component.children }));
+      reconcileChildren(vnode.dom!, vnode, newVNode);
+      vnode.props = newVNode.props;
+      vnode.type = newVNode.type;
+      console.log(vnode)
+    };
+  } else {
+    /* 处理 HTML 组件 */
+    vnode = new VNode(
+      element.type,
+      element.props,
+      element.children.map((child) => buildVDOM(child))
+    );
+  }
+  return vnode;
 }
 
 export const ReactDOM = {
-  render(element: JSXElement | string | number, container: Element, oldDOM?: Element) {
-    if (typeof element !== "object") {
-      container.appendChild(document.createTextNode(element.toString()));
-      return;
-    }
-    if (isFuncElement(element)) {
-      let component = new Component(element.type, element.props);
-      handleFuncElement(component, container, oldDOM);
-    } else {
-      handlePureElement(element, container, oldDOM);
-    }
+  render(element: JSXElement, container: Element) {
+    vdom.root = buildVDOM(element);
+    container.appendChild(createDOM(vdom.root));
   },
 };
